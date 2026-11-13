@@ -1,0 +1,177 @@
+// 鸿鹄局 —— 数据库模型
+// 运行 `npm run db:migrate` 应用结构，`npm run db:seed` 写入演示数据。
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ─────────────────────────── 枚举 ───────────────────────────
+// PostgreSQL 会在数据库层创建 enum 类型并强制取值约束。
+
+enum UserRole {
+  USER // 普通用户
+  ADMIN // 管理员
+}
+
+enum UserStatus {
+  ACTIVE // 正常
+  BANNED // 已封禁
+}
+
+enum PostStatus {
+  PUBLISHED // 正常展示
+  HIDDEN // 管理员隐藏
+  DELETED // 管理员删除
+}
+
+enum CommentStatus {
+  VISIBLE // 正常展示
+  HIDDEN // 管理员隐藏
+  DELETED // 管理员删除
+}
+
+enum CardStatus {
+  PENDING // 待审核
+  APPROVED // 审核通过，大厅可见
+  REJECTED // 审核驳回
+}
+
+enum AllianceStatus {
+  PENDING // 待对方处理
+  ACCEPTED // 已结盟，双方可见微信号
+  REJECTED // 被拒绝
+  CANCELLED // 发起方撤回
+}
+
+// ─────────────────────────── 用户 ───────────────────────────
+
+model User {
+  id           String     @id @default(cuid())
+  nickname     String     @unique // 昵称，同时作为登录账号
+  phone        String?    @unique // 注册绑定的手机号
+  passwordHash String     @map("password_hash")
+  avatarUrl    String?    @map("avatar_url")
+  role         UserRole   @default(USER)
+  status       UserStatus @default(ACTIVE)
+  // 最近一次活跃的 IP 属地（省级），用于名片展示
+  ipRegion     String?    @map("ip_region")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  posts                  Post[]            @relation("PostAuthor")
+  comments               Comment[]         @relation("CommentAuthor")
+  postLikes              PostLike[]        @relation("PostLikes")
+  card                   Card?             @relation("UserCard")
+  reviewedCards          Card[]            @relation("CardReviewer")
+  sentAllianceRequests   AllianceRequest[] @relation("AllianceFrom")
+  receivedAllianceRequests AllianceRequest[] @relation("AllianceTo")
+
+  @@map("users")
+}
+
+// ─────────────────────────── 广场帖子 ───────────────────────────
+
+model Post {
+  id        String     @id @default(cuid())
+  authorId  String     @map("author_id")
+  title     String
+  content   String
+  status    PostStatus @default(PUBLISHED)
+  viewCount Int        @default(0) @map("view_count")
+  // 发帖时的 IP 属地（省级），发帖后不再变化
+  ipRegion  String?    @map("ip_region")
+  createdAt DateTime   @default(now()) @map("created_at")
+  updatedAt DateTime   @updatedAt @map("updated_at")
+
+  author   User       @relation("PostAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+  comments Comment[]
+  likes    PostLike[]
+
+  // 广场按最新时间倒序展示
+  @@index([status, createdAt])
+  @@map("posts")
+}
+
+// 帖子点赞：同一用户对同一帖子只能点一次
+model PostLike {
+  id        String   @id @default(cuid())
+  postId    String   @map("post_id")
+  userId    String   @map("user_id")
+  createdAt DateTime @default(now()) @map("created_at")
+
+  post Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  user User @relation("PostLikes", fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([postId, userId])
+  @@index([postId])
+  @@map("post_likes")
+}
+
+model Comment {
+  id        String        @id @default(cuid())
+  postId    String        @map("post_id")
+  authorId  String        @map("author_id")
+  content   String
+  status    CommentStatus @default(VISIBLE)
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  post   Post @relation(fields: [postId], references: [id], onDelete: Cascade)
+  author User @relation("CommentAuthor", fields: [authorId], references: [id], onDelete: Cascade)
+
+  @@index([postId, createdAt])
+  @@map("comments")
+}
+
+// ─────────────────────────── 结盟大厅：技能档案名片 ───────────────────────────
+
+model Card {
+  id           String     @id @default(cuid())
+  userId       String     @unique @map("user_id") // 每位用户一张名片
+  canProvide   String     @map("can_provide") // 我能提供什么
+  needHelp     String     @map("need_help") // 我需要什么
+  wechat       String // 微信号，仅结盟成功后对对方可见
+  tags         String     @default("[]") // 标签 JSON 数组，如 ["前端","设计"]
+  status       CardStatus @default(PENDING)
+  reviewNote   String?    @map("review_note")
+  reviewedById String?    @map("reviewed_by_id")
+  reviewedAt   DateTime?  @map("reviewed_at")
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+
+  user             User              @relation("UserCard", fields: [userId], references: [id], onDelete: Cascade)
+  reviewedBy       User?             @relation("CardReviewer", fields: [reviewedById], references: [id], onDelete: SetNull)
+  allianceRequests AllianceRequest[]
+
+  @@index([status, createdAt])
+  @@map("cards")
+}
+
+// ─────────────────────────── 结盟申请 ───────────────────────────
+
+model AllianceRequest {
+  id          String         @id @default(cuid())
+  // 无序用户对标识：小 id + 大 id。保证一对用户只有一条结盟关系记录
+  pairKey     String         @unique @map("pair_key")
+  fromUserId  String         @map("from_user_id")
+  toUserId    String         @map("to_user_id")
+  cardId      String         @map("card_id") // 被申请方的名片
+  message     String? // 申请留言
+  status      AllianceStatus @default(PENDING)
+  respondedAt DateTime?      @map("responded_at")
+  createdAt   DateTime       @default(now()) @map("created_at")
+  updatedAt   DateTime       @updatedAt @map("updated_at")
+
+  fromUser User @relation("AllianceFrom", fields: [fromUserId], references: [id], onDelete: Cascade)
+  toUser   User @relation("AllianceTo", fields: [toUserId], references: [id], onDelete: Cascade)
+  card     Card @relation(fields: [cardId], references: [id], onDelete: Cascade)
+
+  @@index([toUserId, status])
+  @@index([fromUserId, status])
+  @@map("alliance_requests")
+}

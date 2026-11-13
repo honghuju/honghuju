@@ -1,0 +1,33 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-ink: #f8fafc;
+  --color-ink-soft: #ffffff;
+  --color-paper: #1e293b;
+  --color-acid: #2563eb;
+  --color-muted: #94a3b8;
+}
+
+body {
+  background: var(--color-ink);
+  color: var(--color-paper);
+  font-family:
+    ui-sans-serif,
+    system-ui,
+    -apple-system,
+    "PingFang SC",
+    "Hiragino Sans GB",
+    "Microsoft YaHei",
+    sans-serif;
+}
+
+@keyframes toast-slide {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
