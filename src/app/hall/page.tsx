@@ -49,7 +49,7 @@ export default async function HallPage({
       canProvide: true,
       needHelp: true,
       tags: true,
-      user: { select: { nickname: true } },
+      user: { select: { nickname: true, phone: true } },
     },
   });
 
@@ -71,6 +71,7 @@ export default async function HallPage({
     canProvide: card.canProvide,
     needHelp: card.needHelp,
     isMine: user?.id === card.userId,
+    hasPhone: Boolean(card.user.phone),
   }));
 
   return (

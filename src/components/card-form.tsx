@@ -10,6 +10,7 @@ type CardFormValues = {
   canProvide: string;
   needHelp: string;
   wechat: string;
+  phone?: string;
 };
 
 type CardFormProps = {
@@ -169,6 +170,25 @@ export function CardForm({ defaultValues, isUpdate }: CardFormProps) {
         />
         <span className="text-[11px] text-muted">
           不会公开展示，只有双方结盟成功后才会互相可见。
+        </span>
+      </label>
+
+      <label className="flex flex-col gap-2">
+        <span className="text-sm font-semibold">
+          手机号 <span className="text-xs font-normal text-muted">（选填）</span>
+        </span>
+        <input
+          name="phone"
+          type="tel"
+          inputMode="numeric"
+          pattern="1[3-9][0-9]{9}"
+          maxLength={11}
+          defaultValue={defaultValues?.phone}
+          placeholder="填写 11 位手机号，可留空"
+          className={inputClass}
+        />
+        <span className="text-[11px] text-muted">
+          绑定后昵称旁会显示「已绑定手机」标识，提升结盟信任度。号码不会公开展示，仅管理员可核查。
         </span>
       </label>
 

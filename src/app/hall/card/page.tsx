@@ -75,6 +75,7 @@ export default async function MyCardPage() {
                   canProvide: card.canProvide,
                   needHelp: card.needHelp,
                   wechat: card.wechat,
+                  phone: user.phone ?? "",
                 }
               : undefined
           }

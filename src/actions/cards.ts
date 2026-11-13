@@ -20,6 +20,7 @@ export async function saveCardAction(
   const canProvide = String(formData.get("canProvide") ?? "").trim();
   const needHelp = String(formData.get("needHelp") ?? "").trim();
   const wechat = String(formData.get("wechat") ?? "").trim();
+  const phone = String(formData.get("phone") ?? "").trim();
   const tags = parseTags(String(formData.get("tags") ?? "[]"));
 
   if (tags.length === 0) {
@@ -37,34 +38,59 @@ export async function saveCardAction(
   if (wechat.length < 2 || wechat.length > 50 || /\s/.test(wechat)) {
     return { error: "请填写 2-50 个字符的微信号，且不能包含空格" };
   }
+  if (phone && !/^1[3-9]\d{9}$/.test(phone)) {
+    return { error: "手机号格式不正确，请填写 11 位手机号或留空" };
+  }
+
+  // 手机号绑定在用户账号上，选填；已被其他账号占用时不能重复绑定
+  if (phone) {
+    const phoneTaken = await prisma.user.findUnique({ where: { phone } });
+    if (phoneTaken && phoneTaken.id !== user.id) {
+      return { error: "该手机号已被其他账号绑定" };
+    }
+  }
 
   const tagsJson = serializeTags(tags);
 
-  // 新建或修改后都进入待审核，修改已通过的名片也需要重新审核
-  await prisma.card.upsert({
-    where: { userId: user.id },
-    update: {
-      canProvide,
-      needHelp,
-      wechat,
-      tags: tagsJson,
-      status: "PENDING",
-      reviewNote: null,
-      reviewedById: null,
-      reviewedAt: null,
-    },
-    create: {
-      userId: user.id,
-      canProvide,
-      needHelp,
-      wechat,
-      tags: tagsJson,
-      status: "PENDING",
-    },
-  });
+  try {
+    // 新建或修改后都进入待审核，修改已通过的名片也需要重新审核
+    await prisma.$transaction([
+      prisma.user.update({
+        where: { id: user.id },
+        data: { phone: phone || null },
+      }),
+      prisma.card.upsert({
+        where: { userId: user.id },
+        update: {
+          canProvide,
+          needHelp,
+          wechat,
+          tags: tagsJson,
+          status: "PENDING",
+          reviewNote: null,
+          reviewedById: null,
+          reviewedAt: null,
+        },
+        create: {
+          userId: user.id,
+          canProvide,
+          needHelp,
+          wechat,
+          tags: tagsJson,
+          status: "PENDING",
+        },
+      }),
+    ]);
+  } catch (error) {
+    if ((error as { code?: string }).code === "P2002") {
+      return { error: "该手机号已被其他账号绑定" };
+    }
+    throw error;
+  }
 
   revalidatePath("/hall/card");
   revalidatePath("/hall");
+  revalidatePath("/admin/users");
 
   // 同步刷新用户的 IP 属地，名片详情页会展示这个值
   const ipRegion = await getRequestRegion();

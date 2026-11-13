@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { PhoneVerifiedBadge } from "@/components/phone-verified-badge";
 import { tagPillClass } from "@/lib/tag-style";
 
 export type HallCard = {
@@ -8,6 +9,7 @@ export type HallCard = {
   canProvide: string;
   needHelp: string;
   isMine: boolean;
+  hasPhone: boolean;
 };
 
 type HallBoardProps = {
@@ -126,6 +128,7 @@ export function HallBoard({
                 <span className="truncate text-sm font-semibold">
                   {card.nickname}
                 </span>
+                {card.hasPhone ? <PhoneVerifiedBadge /> : null}
                 {card.isMine ? (
                   <span className="rounded-full border border-gray-200 px-2 py-0.5 text-[10px] text-gray-400">
                     我的名片

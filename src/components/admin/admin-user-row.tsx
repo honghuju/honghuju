@@ -74,6 +74,13 @@ export function AdminUserRow({ user }: { user: AdminUserRowData }) {
         </div>
         {error ? <p className="mt-1 text-[11px] text-red-500">{error}</p> : null}
       </td>
+      <td className="whitespace-nowrap px-3 py-2.5 text-[11px] tabular-nums">
+        {user.phone ? (
+          <span className="text-slate-600">{user.phone}</span>
+        ) : (
+          <span className="text-slate-300">未绑定</span>
+        )}
+      </td>
       <td className="hidden whitespace-nowrap px-3 py-2.5 text-xs text-slate-500 md:table-cell">
         {user.ipRegion ?? "—"}
       </td>

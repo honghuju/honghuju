@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { cache } from "react";
 import { RequestCardButton } from "@/components/request-card-button";
+import { PhoneVerifiedBadge } from "@/components/phone-verified-badge";
 import { makePairKey } from "@/lib/alliance";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -21,7 +22,7 @@ const getCard = cache(async (id: string) => {
       canProvide: true,
       needHelp: true,
       tags: true,
-      user: { select: { nickname: true, ipRegion: true } },
+      user: { select: { nickname: true, ipRegion: true, phone: true } },
     },
   });
 });
@@ -87,9 +88,12 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
           {card.user.nickname.slice(0, 1)}
         </span>
         <div className="min-w-0">
-          <h1 className="truncate text-2xl font-black tracking-tight">
-            {card.user.nickname}
-          </h1>
+          <div className="flex flex-wrap items-center gap-1.5">
+            <h1 className="truncate text-2xl font-black tracking-tight">
+              {card.user.nickname}
+            </h1>
+            {card.user.phone ? <PhoneVerifiedBadge /> : null}
+          </div>
           <p className="mt-1 text-xs text-muted">
             {isOwner ? "这是你的名片" : "寻找合伙人中"}
             {card.user.ipRegion ? ` · IP属地：${card.user.ipRegion}` : ""}

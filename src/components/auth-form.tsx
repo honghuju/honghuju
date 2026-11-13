@@ -25,7 +25,7 @@ export function AuthForm({ mode, next = "/" }: AuthFormProps) {
       <input type="hidden" name="next" value={next} />
 
       <label className="flex flex-col gap-2">
-        <span className="text-xs text-muted">昵称</span>
+        <span className="text-xs text-muted">用户名</span>
         <input
           name="nickname"
           type="text"
@@ -38,30 +38,12 @@ export function AuthForm({ mode, next = "/" }: AuthFormProps) {
         />
       </label>
 
-      {isRegister ? (
-        <label className="flex flex-col gap-2">
-          <span className="text-xs text-muted">手机号</span>
-          <input
-            name="phone"
-            type="tel"
-            required
-            inputMode="numeric"
-            pattern="1[3-9][0-9]{9}"
-            maxLength={11}
-            autoComplete="tel"
-            placeholder="用于绑定账号，11 位手机号"
-            className={inputClass}
-          />
-        </label>
-      ) : null}
-
       <label className="flex flex-col gap-2">
         <span className="text-xs text-muted">密码</span>
         <input
           name="password"
           type="password"
           required
-          minLength={6}
           autoComplete={isRegister ? "new-password" : "current-password"}
           placeholder={isRegister ? "至少 6 位" : "输入密码"}
           className={inputClass}
@@ -75,7 +57,6 @@ export function AuthForm({ mode, next = "/" }: AuthFormProps) {
             name="confirm"
             type="password"
             required
-            minLength={6}
             autoComplete="new-password"
             placeholder="再输入一次"
             className={inputClass}

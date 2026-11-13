@@ -113,6 +113,9 @@ export default async function AdminUsersPage({
           <thead>
             <tr className="border-b border-slate-200 bg-slate-50 text-[11px] text-slate-500">
               <th className="px-4 py-2.5 font-medium">用户名</th>
+              <th className="w-24 px-3 py-2.5 font-medium sm:w-28">
+                绑定手机号
+              </th>
               <th className="hidden px-3 py-2.5 font-medium md:table-cell">
                 IP 属地
               </th>
@@ -132,7 +135,7 @@ export default async function AdminUsersPage({
             {users.length === 0 ? (
               <tr>
                 <td
-                  colSpan={6}
+                  colSpan={7}
                   className="px-4 py-12 text-center text-xs text-slate-400"
                 >
                   没有符合条件的用户
