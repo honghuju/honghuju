@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { requireUser } from "@/lib/auth";
+import { checkFields } from "@/lib/content-filter";
 import { getRequestRegion } from "@/lib/ip-region";
 import { prisma } from "@/lib/prisma";
 import { MAX_CARD_TAGS, parseTags, serializeTags } from "@/lib/tags";
@@ -40,6 +41,11 @@ export async function saveCardAction(
   }
   if (phone && !/^1[3-9]\d{9}$/.test(phone)) {
     return { error: "手机号格式不正确，请填写 11 位手机号或留空" };
+  }
+
+  const sensitive = checkFields([canProvide, needHelp, wechat, tags.join(" ")]);
+  if (!sensitive.ok) {
+    return { error: sensitive.error };
   }
 
   // 手机号绑定在用户账号上，选填；已被其他账号占用时不能重复绑定

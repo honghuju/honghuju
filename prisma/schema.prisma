@@ -39,6 +39,7 @@ enum CardStatus {
   PENDING // 待审核
   APPROVED // 审核通过，大厅可见
   REJECTED // 审核驳回
+  HIDDEN // 被举报后自动屏蔽
 }
 
 enum AllianceStatus {
@@ -46,6 +47,11 @@ enum AllianceStatus {
   ACCEPTED // 已结盟，双方可见微信号
   REJECTED // 被拒绝
   CANCELLED // 发起方撤回
+}
+
+enum ReportTarget {
+  POST // 广场帖子
+  CARD // 结盟名片
 }
 
 // ─────────────────────────── 用户 ───────────────────────────
@@ -70,6 +76,7 @@ model User {
   reviewedCards          Card[]            @relation("CardReviewer")
   sentAllianceRequests   AllianceRequest[] @relation("AllianceFrom")
   receivedAllianceRequests AllianceRequest[] @relation("AllianceTo")
+  reports                Report[]          @relation("ReportReporter")
 
   @@map("users")
 }
@@ -174,4 +181,24 @@ model AllianceRequest {
   @@index([toUserId, status])
   @@index([fromUserId, status])
   @@map("alliance_requests")
+}
+
+// ─────────────────────────── 举报记录 ───────────────────────────
+
+model Report {
+  id         String       @id @default(cuid())
+  targetType ReportTarget @map("target_type")
+  targetId   String       @map("target_id")
+  reporterId String       @map("reporter_id")
+  reason     String? // 举报人填写的补充说明（选填）
+  handled    Boolean      @default(false) // 管理员是否已处理
+  handledAt  DateTime?    @map("handled_at")
+  createdAt  DateTime     @default(now()) @map("created_at")
+
+  reporter User @relation("ReportReporter", fields: [reporterId], references: [id], onDelete: Cascade)
+
+  // 同一用户对同一内容只能举报一次
+  @@unique([targetType, targetId, reporterId])
+  @@index([targetType, handled, createdAt])
+  @@map("reports")
 }

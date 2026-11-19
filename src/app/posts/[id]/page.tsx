@@ -91,7 +91,7 @@ export default async function PostDetailPage({
 
         {post.status === "HIDDEN" ? (
           <p className="mt-2 inline-block rounded-full bg-amber-50 px-2.5 py-0.5 text-[10px] text-amber-600">
-            已被管理员屏蔽，仅你和管理员可见
+            已被屏蔽，仅你和管理员可见
           </p>
         ) : null}
 

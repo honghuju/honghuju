@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { cache } from "react";
 import { RequestCardButton } from "@/components/request-card-button";
 import { PhoneVerifiedBadge } from "@/components/phone-verified-badge";
+import { ReportButton } from "@/components/report-button";
 import { makePairKey } from "@/lib/alliance";
 import { getCurrentUser } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
@@ -147,6 +148,12 @@ export default async function CardDetailPage({ params }: CardDetailPageProps) {
             {contact ? contact.wechat : "结盟成功后可见"}
           </span>
         </div>
+
+        {!isOwner ? (
+          <div className="text-right">
+            <ReportButton kind="card" id={card.id} />
+          </div>
+        ) : null}
       </div>
 
       <div className="sticky bottom-0 -mx-5 mt-8 border-t border-gray-100 bg-white/90 px-5 py-3 backdrop-blur">

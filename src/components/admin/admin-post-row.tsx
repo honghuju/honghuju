@@ -14,6 +14,7 @@ export type AdminPostRowData = {
   authorNickname: string;
   createdAtLabel: string;
   status: PostStatus;
+  reportCount: number;
 };
 
 const badge: Record<PostStatus, { label: string; className: string }> = {
@@ -61,6 +62,11 @@ export function AdminPostRow({ post }: { post: AdminPostRowData }) {
         >
           {post.title}
         </Link>
+        {post.reportCount > 0 ? (
+          <span className="ml-2 rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] text-red-500">
+            被举报 {post.reportCount}
+          </span>
+        ) : null}
         {error ? <p className="mt-1 text-[11px] text-red-500">{error}</p> : null}
       </td>
       <td className="hidden whitespace-nowrap px-3 py-2.5 text-xs text-slate-500 sm:table-cell">

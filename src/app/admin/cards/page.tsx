@@ -15,7 +15,7 @@ export const metadata: Metadata = {
 
 const PAGE_SIZE = 10;
 
-type FilterKey = "PENDING" | "APPROVED" | "REJECTED";
+type FilterKey = "PENDING" | "APPROVED" | "REJECTED" | "HIDDEN";
 
 export default async function AdminCardsPage({
   searchParams,
@@ -24,18 +24,27 @@ export default async function AdminCardsPage({
 }) {
   const { status, page: pageParam } = await searchParams;
   const filter: FilterKey =
-    status === "APPROVED" || status === "REJECTED" ? status : "PENDING";
+    status === "APPROVED" || status === "REJECTED" || status === "HIDDEN"
+      ? status
+      : "PENDING";
 
   const where: Prisma.CardWhereInput = { status: filter as CardStatus };
 
-  const [pending, approved, rejected] = await Promise.all([
+  const [pending, approved, rejected, hidden] = await Promise.all([
     prisma.card.count({ where: { status: "PENDING" } }),
     prisma.card.count({ where: { status: "APPROVED" } }),
     prisma.card.count({ where: { status: "REJECTED" } }),
+    prisma.card.count({ where: { status: "HIDDEN" } }),
   ]);
 
   const matched =
-    filter === "PENDING" ? pending : filter === "APPROVED" ? approved : rejected;
+    filter === "PENDING"
+      ? pending
+      : filter === "APPROVED"
+        ? approved
+        : filter === "REJECTED"
+          ? rejected
+          : hidden;
   const totalPages = Math.max(1, Math.ceil(matched / PAGE_SIZE));
   const page = Math.min(Math.max(1, Number(pageParam) || 1), totalPages);
 
@@ -49,6 +58,20 @@ export default async function AdminCardsPage({
       reviewedBy: { select: { nickname: true } },
     },
   });
+
+  // 当前页名片的未处理举报数
+  const reportCounts = await prisma.report.groupBy({
+    by: ["targetId"],
+    where: {
+      targetType: "CARD",
+      handled: false,
+      targetId: { in: cards.map((card) => card.id) },
+    },
+    _count: { _all: true },
+  });
+  const reportCountMap = new Map(
+    reportCounts.map((item) => [item.targetId, item._count._all])
+  );
 
   const tabs = [
     {
@@ -68,6 +91,12 @@ export default async function AdminCardsPage({
       label: "已拒绝",
       count: rejected,
       href: "/admin/cards?status=REJECTED",
+    },
+    {
+      key: "HIDDEN",
+      label: "已屏蔽",
+      count: hidden,
+      href: "/admin/cards?status=HIDDEN",
     },
   ];
 
@@ -125,6 +154,7 @@ export default async function AdminCardsPage({
                     reviewNote: card.reviewNote,
                     reviewedByLabel: card.reviewedBy?.nickname ?? null,
                     region: card.user.ipRegion,
+                    reportCount: reportCountMap.get(card.id) ?? 0,
                   }}
                 />
               ))

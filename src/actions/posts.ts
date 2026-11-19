@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireUser } from "@/lib/auth";
+import { checkFields } from "@/lib/content-filter";
 import { getRequestRegion } from "@/lib/ip-region";
 import { prisma } from "@/lib/prisma";
 
@@ -32,6 +33,11 @@ export async function createPostAction(
   }
   if (content.length > 5000) {
     return { error: "正文不能超过 5000 个字" };
+  }
+
+  const sensitive = checkFields([title, content]);
+  if (!sensitive.ok) {
+    return { error: sensitive.error };
   }
 
   const ipRegion = await getRequestRegion();
@@ -152,6 +158,10 @@ export async function deletePostAction(postId: string): Promise<DeletePostResult
   }
 
   await prisma.post.delete({ where: { id: postId } });
+  // 帖子删除后，针对它的举报记录一并清理
+  await prisma.report.deleteMany({
+    where: { targetType: "POST", targetId: postId },
+  });
 
   revalidatePath("/");
   revalidatePath("/my-posts");

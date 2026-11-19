@@ -27,6 +27,11 @@ const STATUS_META = {
     className: "border-red-200 bg-red-50 text-red-600",
     hint: "请根据审核意见修改后重新提交。",
   },
+  HIDDEN: {
+    label: "已屏蔽",
+    className: "border-red-200 bg-red-50 text-red-600",
+    hint: "该名片被用户举报，管理员核实前暂不展示。修改内容后会重新进入审核。",
+  },
 } as const;
 
 function StatusBanner({

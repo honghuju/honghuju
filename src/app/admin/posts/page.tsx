@@ -14,7 +14,7 @@ export const metadata: Metadata = {
 
 const PAGE_SIZE = 10;
 
-type FilterKey = "ALL" | "PUBLISHED" | "HIDDEN";
+type FilterKey = "ALL" | "PUBLISHED" | "HIDDEN" | "REPORTED";
 
 export default async function AdminPostsPage({
   searchParams,
@@ -23,10 +23,24 @@ export default async function AdminPostsPage({
 }) {
   const { status, page: pageParam } = await searchParams;
   const filter: FilterKey =
-    status === "PUBLISHED" || status === "HIDDEN" ? status : "ALL";
+    status === "PUBLISHED" || status === "HIDDEN" || status === "REPORTED"
+      ? status
+      : "ALL";
+
+  // 有未处理举报的帖子 id 列表
+  const reported = await prisma.report.findMany({
+    where: { targetType: "POST", handled: false },
+    select: { targetId: true },
+    distinct: ["targetId"],
+  });
+  const reportedIds = reported.map((item) => item.targetId);
 
   const where: Prisma.PostWhereInput =
-    filter === "ALL" ? {} : { status: filter as PostStatus };
+    filter === "ALL"
+      ? {}
+      : filter === "REPORTED"
+        ? { id: { in: reportedIds } }
+        : { status: filter as PostStatus };
 
   const [total, published, hidden] = await Promise.all([
     prisma.post.count(),
@@ -34,7 +48,14 @@ export default async function AdminPostsPage({
     prisma.post.count({ where: { status: "HIDDEN" } }),
   ]);
 
-  const matched = filter === "ALL" ? total : filter === "PUBLISHED" ? published : hidden;
+  const matched =
+    filter === "ALL"
+      ? total
+      : filter === "PUBLISHED"
+        ? published
+        : filter === "HIDDEN"
+          ? hidden
+          : reportedIds.length;
   const totalPages = Math.max(1, Math.ceil(matched / PAGE_SIZE));
   const page = Math.min(Math.max(1, Number(pageParam) || 1), totalPages);
 
@@ -45,6 +66,20 @@ export default async function AdminPostsPage({
     take: PAGE_SIZE,
     include: { author: { select: { nickname: true } } },
   });
+
+  // 统计当前页每篇帖子的未处理举报数
+  const reportCounts = await prisma.report.groupBy({
+    by: ["targetId"],
+    where: {
+      targetType: "POST",
+      handled: false,
+      targetId: { in: posts.map((post) => post.id) },
+    },
+    _count: { _all: true },
+  });
+  const reportCountMap = new Map(
+    reportCounts.map((item) => [item.targetId, item._count._all])
+  );
 
   const tabs = [
     { key: "ALL", label: "全部", count: total, href: "/admin/posts" },
@@ -59,6 +94,12 @@ export default async function AdminPostsPage({
       label: "已屏蔽",
       count: hidden,
       href: "/admin/posts?status=HIDDEN",
+    },
+    {
+      key: "REPORTED",
+      label: "被举报",
+      count: reportedIds.length,
+      href: "/admin/posts?status=REPORTED",
     },
   ];
 
@@ -112,6 +153,7 @@ export default async function AdminPostsPage({
                     authorNickname: post.author.nickname,
                     createdAtLabel: formatRelativeTime(post.createdAt),
                     status: post.status,
+                    reportCount: reportCountMap.get(post.id) ?? 0,
                   }}
                 />
               ))

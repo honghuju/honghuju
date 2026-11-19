@@ -34,7 +34,12 @@ export async function setCardStatusAction(
     return { ok: false, error: "没有权限执行此操作" };
   }
 
-  if (status !== "APPROVED" && status !== "REJECTED" && status !== "PENDING") {
+  if (
+    status !== "APPROVED" &&
+    status !== "REJECTED" &&
+    status !== "PENDING" &&
+    status !== "HIDDEN"
+  ) {
     return { ok: false, error: "不支持的名片状态" };
   }
 
@@ -52,11 +57,24 @@ export async function setCardStatusAction(
     where: { id: cardId },
     data: {
       status,
-      reviewNote: status === "REJECTED" ? reviewNote || "信息不完整" : null,
+      reviewNote:
+        status === "REJECTED"
+          ? reviewNote || "信息不完整"
+          : status === "HIDDEN"
+            ? reviewNote || "管理员已屏蔽"
+            : null,
       reviewedById: user.id,
       reviewedAt: new Date(),
     },
   });
+
+  // 恢复上架视为举报已处理
+  if (status === "APPROVED") {
+    await prisma.report.updateMany({
+      where: { targetType: "CARD", targetId: cardId, handled: false },
+      data: { handled: true, handledAt: new Date() },
+    });
+  }
 
   revalidateModeration();
 
@@ -91,6 +109,14 @@ export async function setPostStatusAction(
     where: { id: postId },
     data: { status },
   });
+
+  // 恢复帖子视为举报已处理
+  if (status === "PUBLISHED") {
+    await prisma.report.updateMany({
+      where: { targetType: "POST", targetId: postId, handled: false },
+      data: { handled: true, handledAt: new Date() },
+    });
+  }
 
   revalidateModeration();
   revalidatePath(`/posts/${postId}`);

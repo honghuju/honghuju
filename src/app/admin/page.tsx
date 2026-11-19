@@ -1,14 +1,17 @@
+import Link from "next/link";
 import { prisma } from "@/lib/prisma";
 
 export const dynamic = "force-dynamic";
 
 export default async function AdminOverviewPage() {
-  const [totalUsers, totalPosts, pendingCards, hiddenPosts] = await Promise.all([
-    prisma.user.count(),
-    prisma.post.count(),
-    prisma.card.count({ where: { status: "PENDING" } }),
-    prisma.post.count({ where: { status: "HIDDEN" } }),
-  ]);
+  const [totalUsers, totalPosts, pendingCards, hiddenPosts, pendingReports] =
+    await Promise.all([
+      prisma.user.count(),
+      prisma.post.count(),
+      prisma.card.count({ where: { status: "PENDING" } }),
+      prisma.post.count({ where: { status: "HIDDEN" } }),
+      prisma.report.count({ where: { handled: false } }),
+    ]);
 
   const stats = [
     {
@@ -60,6 +63,22 @@ export default async function AdminOverviewPage() {
           </div>
         ))}
       </div>
+
+      {pendingReports > 0 ? (
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-2 rounded-xl border border-red-200 bg-red-50 px-4 py-3">
+          <p className="text-xs text-red-600">
+            有 {pendingReports} 条举报待处理，相关内容已自动屏蔽
+          </p>
+          <div className="flex gap-3 text-xs font-medium">
+            <Link href="/admin/posts?status=REPORTED" className="text-red-600 hover:underline">
+              处理帖子举报
+            </Link>
+            <Link href="/admin/cards?status=HIDDEN" className="text-red-600 hover:underline">
+              处理名片举报
+            </Link>
+          </div>
+        </div>
+      ) : null}
     </div>
   );
 }

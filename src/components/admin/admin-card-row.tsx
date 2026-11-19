@@ -19,12 +19,14 @@ export type AdminCardRowData = {
   reviewNote: string | null;
   reviewedByLabel: string | null;
   region: string | null;
+  reportCount: number;
 };
 
 const badge: Record<CardStatus, { label: string; className: string }> = {
   PENDING: { label: "待审核", className: "bg-amber-50 text-amber-600" },
   APPROVED: { label: "已通过", className: "bg-green-50 text-green-600" },
   REJECTED: { label: "已拒绝", className: "bg-red-50 text-red-500" },
+  HIDDEN: { label: "已屏蔽", className: "bg-amber-50 text-amber-600" },
 };
 
 export function AdminCardRow({ card }: { card: AdminCardRowData }) {
@@ -60,6 +62,11 @@ export function AdminCardRow({ card }: { card: AdminCardRowData }) {
           <span className="truncate text-[13px] font-medium text-slate-800">
             {card.nickname}
           </span>
+          {card.reportCount > 0 ? (
+            <span className="shrink-0 rounded-full bg-red-50 px-1.5 py-0.5 text-[10px] text-red-500">
+              被举报 {card.reportCount}
+            </span>
+          ) : null}
         </div>
         {error ? <p className="mt-1 text-[11px] text-red-500">{error}</p> : null}
       </td>
@@ -129,7 +136,7 @@ export function AdminCardRow({ card }: { card: AdminCardRowData }) {
               disabled={isPending}
               className="text-green-600 hover:underline disabled:opacity-50"
             >
-              重新通过
+              {card.status === "HIDDEN" ? "恢复上架" : "重新通过"}
             </button>
           )}
         </div>
@@ -196,10 +203,10 @@ export function AdminCardRow({ card }: { card: AdminCardRowData }) {
                       {card.wechat}
                     </dd>
                   </div>
-                  {card.status === "REJECTED" && card.reviewNote ? (
+                  {card.reviewNote ? (
                     <div>
                       <dt className="text-[10px] tracking-[0.18em] text-slate-400">
-                        驳回原因
+                        {card.status === "HIDDEN" ? "屏蔽原因" : "驳回原因"}
                       </dt>
                       <dd className="mt-0.5 text-slate-600">{card.reviewNote}</dd>
                     </div>
@@ -263,7 +270,11 @@ export function AdminCardRow({ card }: { card: AdminCardRowData }) {
                       disabled={isPending}
                       className="rounded-full bg-green-600 px-4 py-1.5 text-xs font-bold text-white disabled:opacity-60"
                     >
-                      {isPending ? "处理中…" : "重新通过"}
+                      {isPending
+                        ? "处理中…"
+                        : card.status === "HIDDEN"
+                          ? "恢复上架"
+                          : "重新通过"}
                     </button>
                   )}
                 </div>

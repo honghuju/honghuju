@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { AdminQuickPostMenu } from "@/components/admin/quick-post-menu";
 import { LikeButton } from "@/components/like-button";
+import { ReportButton } from "@/components/report-button";
 import { getCurrentUser } from "@/lib/auth";
 import { excerpt, formatRelativeTime } from "@/lib/format";
 import { prisma } from "@/lib/prisma";
@@ -121,6 +122,9 @@ export default async function HomePage({
                     {post._count.comments} 评论
                   </Link>
                   <span>{post.viewCount} 浏览</span>
+                  {isAdmin ? null : (
+                    <ReportButton kind="post" id={post.id} />
+                  )}
                 </div>
 
                 <LikeButton
